@@ -1,0 +1,7 @@
+{
+  "name": "Innova-IA",
+  "description": "Plataforma empresarial para el aprendizaje de Inteligencia Artificial Generativa con asistente chat y voz en tiempo real.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
