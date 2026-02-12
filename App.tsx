@@ -7,6 +7,39 @@ import { Sparkles, Zap, Globe } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.HOME);
+  const [apiKeyError, setApiKeyError] = useState(false);
+
+  // Verificación proactiva de la API Key
+  React.useEffect(() => {
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      setApiKeyError(true);
+    }
+  }, []);
+
+  if (apiKeyError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-red-100">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Zap className="text-red-500" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Configuración Requerida</h2>
+          <p className="text-slate-600 mb-8 leading-relaxed">
+            Parece que falta la <strong>Gemini API Key</strong>. Para que la IA funcione en Vercel, debes añadir la variable de entorno <code className="bg-slate-100 px-2 py-1 rounded">GEMINI_API_KEY</code> en tu panel de control.
+          </p>
+          <a
+            href="https://vercel.com/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+          >
+            Ir al Dashboard de Vercel
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const renderHome = () => (
     <div className="space-y-16 py-10">
@@ -21,17 +54,17 @@ const App: React.FC = () => {
           <span className="text-indigo-600">Para el Futuro Corporativo</span>
         </h1>
         <p className="text-lg text-slate-600 leading-relaxed">
-          Descubre cómo la IA Generativa puede transformar cada departamento de tu organización. 
+          Descubre cómo la IA Generativa puede transformar cada departamento de tu organización.
           Interactúa con nuestros asistentes virtuales especializados.
         </p>
         <div className="flex justify-center gap-4 pt-4">
-          <button 
+          <button
             onClick={() => setMode(AppMode.CHAT)}
             className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
           >
             Consultar al Chat
           </button>
-          <button 
+          <button
             onClick={() => setMode(AppMode.VOICE)}
             className="px-8 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-semibold hover:bg-slate-50 transition-all active:scale-95"
           >

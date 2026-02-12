@@ -55,8 +55,12 @@ export class GeminiLiveClient {
   private isConnectedState = false;
 
   constructor(onVolumeChange: (vol: number) => void, onCloseCallback: () => void) {
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY_MISSING");
+    }
     // Inicialización mandatoria según reglas del SDK
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    this.ai = new GoogleGenAI({ apiKey });
     this.onVolumeChange = onVolumeChange;
     this.onCloseCallback = onCloseCallback;
   }
@@ -76,7 +80,7 @@ export class GeminiLiveClient {
 
       this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      
+
       if (this.outputAudioContext.state === 'suspended') {
         await this.outputAudioContext.resume();
       }
@@ -104,34 +108,34 @@ export class GeminiLiveClient {
           onmessage: async (message: LiveServerMessage) => {
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && this.outputAudioContext) {
-               const audioData = decode(base64Audio);
-               
-               // Visualización de volumen
-               let sum = 0;
-               for(let i=0; i<audioData.length; i+=100) sum += Math.abs(audioData[i]-128);
-               this.onVolumeChange(Math.min(100, sum / 10));
+              const audioData = decode(base64Audio);
 
-               this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
-               try {
-                 const audioBuffer = await decodeAudioData(audioData, this.outputAudioContext, 24000, 1);
-                 const source = this.outputAudioContext.createBufferSource();
-                 source.buffer = audioBuffer;
-                 source.connect(outputNode);
-                 source.start(this.nextStartTime);
-                 this.nextStartTime += audioBuffer.duration;
-                 
-                 source.onended = () => {
-                    this.sources.delete(source);
-                    if (this.sources.size === 0) this.onVolumeChange(0);
-                 };
-                 this.sources.add(source);
-               } catch (e) {
-                 console.error("Error decodificando audio:", e);
-               }
+              // Visualización de volumen
+              let sum = 0;
+              for (let i = 0; i < audioData.length; i += 100) sum += Math.abs(audioData[i] - 128);
+              this.onVolumeChange(Math.min(100, sum / 10));
+
+              this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
+              try {
+                const audioBuffer = await decodeAudioData(audioData, this.outputAudioContext, 24000, 1);
+                const source = this.outputAudioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(outputNode);
+                source.start(this.nextStartTime);
+                this.nextStartTime += audioBuffer.duration;
+
+                source.onended = () => {
+                  this.sources.delete(source);
+                  if (this.sources.size === 0) this.onVolumeChange(0);
+                };
+                this.sources.add(source);
+              } catch (e) {
+                console.error("Error decodificando audio:", e);
+              }
             }
 
             if (message.serverContent?.interrupted) {
-              this.sources.forEach(s => { try { s.stop(); } catch(e) {} });
+              this.sources.forEach(s => { try { s.stop(); } catch (e) { } });
               this.sources.clear();
               this.nextStartTime = 0;
             }
@@ -146,7 +150,7 @@ export class GeminiLiveClient {
           }
         }
       });
-      
+
       await this.sessionPromise;
 
     } catch (error) {
@@ -166,11 +170,11 @@ export class GeminiLiveClient {
       if (!this.isConnectedState) return;
 
       const inputData = e.inputBuffer.getChannelData(0);
-      
+
       // Visualización de volumen de entrada
       let sum = 0;
-      for(let i=0; i<inputData.length; i+=50) sum += Math.abs(inputData[i]);
-      const vol = Math.min(100, (sum / (inputData.length/50)) * 500);
+      for (let i = 0; i < inputData.length; i += 50) sum += Math.abs(inputData[i]);
+      const vol = Math.min(100, (sum / (inputData.length / 50)) * 500);
       this.onVolumeChange(vol);
 
       // Conversión a PCM 16-bit para la API
@@ -179,9 +183,9 @@ export class GeminiLiveClient {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
-      
+
       const base64Data = encode(new Uint8Array(int16.buffer));
-      
+
       // Enviar entrada solo después de que la promesa de la sesión se resuelva
       this.sessionPromise?.then(session => {
         session.sendRealtimeInput({
@@ -202,22 +206,22 @@ export class GeminiLiveClient {
     this.onCloseCallback();
 
     if (this.processor) {
-      try { this.processor.disconnect(); } catch (e) {}
+      try { this.processor.disconnect(); } catch (e) { }
       this.processor = null;
     }
     if (this.inputSource) {
-      try { this.inputSource.disconnect(); } catch (e) {}
+      try { this.inputSource.disconnect(); } catch (e) { }
       this.inputSource = null;
     }
 
     if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
-      try { this.inputAudioContext.close(); } catch (e) {}
+      try { this.inputAudioContext.close(); } catch (e) { }
     }
     if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
-      try { this.outputAudioContext.close(); } catch (e) {}
+      try { this.outputAudioContext.close(); } catch (e) { }
     }
 
-    this.sources.forEach(s => { try { s.stop(); } catch (e) {} });
+    this.sources.forEach(s => { try { s.stop(); } catch (e) { } });
     this.sources.clear();
     this.nextStartTime = 0;
   }

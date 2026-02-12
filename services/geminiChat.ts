@@ -1,8 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import { Message } from "../types";
 
-// El SDK debe inicializarse usando process.env.API_KEY directamente
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// El SDK se inicializa de forma perezosa para evitar bloqueos si falta la clave
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY_MISSING");
+  }
+  if (!aiInstance) {
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 const SYSTEM_INSTRUCTION = `
 Eres el asistente virtual principal de 'Innova-IA', una plataforma de educación y consultoría sobre Inteligencia Artificial Generativa para empresas.
@@ -14,8 +25,9 @@ Usa formato Markdown para estructurar tus respuestas (listas, negritas, etc.).
 
 export const sendMessageToGemini = async (history: Message[], newMessage: string): Promise<string> => {
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       contents: [
         ...history.filter(h => h.role !== 'system').map(h => ({
           role: h.role,
